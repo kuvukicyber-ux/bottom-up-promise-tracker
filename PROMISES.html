@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruto Promises Tracker • Keeping Kenyans Accountable</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navbar -->
+    <nav class="bg-white border-b shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-9 h-9 bg-green-600 rounded-2xl flex items-center justify-center text-white text-2xl">
+                    🇰🇪
+                </div>
+                <div>
+                    <h1 class="text-2xl font-semibold text-gray-900">Ruto Promises Tracker</h1>
+                    <p class="text-xs text-gray-500 -mt-1">Since August 2022 • Bottom-Up Edition</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-x-6">
+                <div onclick="exportData()" class="flex items-center gap-x-2 text-sm font-medium text-gray-700 hover:text-gray-900 cursor-pointer">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Export JSON</span>
+                </div>
+                <div onclick="importData()" class="flex items-center gap-x-2 text-sm font-medium text-gray-700 hover:text-gray-900 cursor-pointer">
+                    <i class="fa-solid fa-upload"></i>
+                    <span>Import JSON</span>
+                </div>
+                <div class="flex items-center bg-gray-100 rounded-3xl px-4 py-1 text-sm">
+                    <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-2"></div>
+                    Live since 2022
+                </div>
+                <button onclick="resetData()" 
+                        class="text-sm font-medium px-5 py-2 bg-white border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-3xl flex items-center gap-x-2 transition-colors">
+                    <i class="fa-solid fa-rotate"></i>
+                    Reset to defaults
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-8">
+            <div>
+                <h2 class="text-4xl font-semibold text-gray-900">Tracking President William Ruto's Promises</h2>
+                <p class="text-gray-600 mt-2 max-w-lg">
+                    Independent, community-powered tracker for every major pledge made since the 2022 election. 
+                    Add, update, and hold the government accountable. Data saved in your browser.
+                </p>
+                <div class="flex items-center gap-x-4 mt-4 text-sm">
+                    <a href="https://tracker.mzalendo.com/" target="_blank" 
+                       class="inline-flex items-center gap-x-1 text-blue-600 hover:text-blue-700">
+                        <i class="fa-solid fa-external-link"></i>
+                        Official Mzalendo Tracker (251 promises)
+                    </a>
+                    <span class="text-gray-400">•</span>
+                    <span class="text-emerald-600 font-medium">Made for Kenyans, by Kenyans</span>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 md:mt-0">
+                <div id="stat-total" onclick="filterByStatus('all')" 
+                     class="bg-white rounded-3xl p-5 card-hover cursor-pointer border border-transparent hover:border-gray-200">
+                    <div class="text-xs uppercase tracking-widest text-gray-500">Total Promises</div>
+                    <div id="total-count" class="text-5xl font-semibold text-gray-900 mt-1">0</div>
+                </div>
+                <div id="stat-fulfilled" onclick="filterByStatus('Fulfilled')" 
+                     class="bg-emerald-50 rounded-3xl p-5 card-hover cursor-pointer border border-transparent hover:border-emerald-200">
+                    <div class="text-xs uppercase tracking-widest text-emerald-600">Fulfilled</div>
+                    <div id="fulfilled-count" class="text-5xl font-semibold text-emerald-600 mt-1">0</div>
+                </div>
+                <div id="stat-ongoing" onclick="filterByStatus('Ongoing')" 
+                     class="bg-blue-50 rounded-3xl p-5 card-hover cursor-pointer border border-transparent hover:border-blue-200">
+                    <div class="text-xs uppercase tracking-widest text-blue-600">In Progress</div>
+                    <div id="ongoing-count" class="text-5xl font-semibold text-blue-600 mt-1">0</div>
+                </div>
+                <div id="stat-broken" onclick="filterByStatus('Broken')" 
+                     class="bg-red-50 rounded-3xl p-5 card-hover cursor-pointer border border-transparent hover:border-red-200">
+                    <div class="text-xs uppercase tracking-widest text-red-600">Not Delivered</div>
+                    <div id="broken-count" class="text-5xl font-semibold text-red-600 mt-1">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+            <div class="flex-1 relative">
+                <input id="search-input" 
+                       onkeyup="if(event.key==='Enter') filterPromises()"
+                       type="text" 
+                       placeholder="Search promises... (e.g. housing, hustler, jobs)"
+                       class="w-full bg-white border border-gray-200 focus:border-gray-400 rounded-3xl px-6 py-4 pl-12 text-lg outline-none">
+                <i class="fa-solid fa-magnifying-glass absolute left-6 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            </div>
+            
+            <select id="category-filter" onchange="filterPromises()" 
+                    class="bg-white border border-gray-200 rounded-3xl px-6 py-4 outline-none text-gray-700">
+                <option value="">All Categories</option>
+            </select>
+
+            <select id="status-filter" onchange="filterPromises()" 
+                    class="bg-white border border-gray-200 rounded-3xl px-6 py-4 outline-none text-gray-700">
+                <option value="">All Statuses</option>
+                <option value="Fulfilled">✅ Fulfilled</option>
+                <option value="Ongoing">🔄 In Progress</option>
+                <option value="Broken">❌ Not Delivered</option>
+                <option value="Not Started">⏳ Not Started</option>
+                <option value="Stalled">🚫 Stalled</option>
+            </select>
+
+            <button onclick="showAddModal()" 
+                    class="bg-green-600 hover:bg-green-700 transition-colors text-white font-semibold px-8 rounded-3xl flex items-center gap-x-3">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add New Promise</span>
+            </button>
+        </div>
+
+        <!-- Promises List -->
+        <div id="promises-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <div class="text-6xl mb-4">🔎</div>
+            <h3 class="text-2xl font-medium text-gray-900">No promises found</h3>
+            <p class="text-gray-500 mt-2">Try different filters or add a new promise yourself.</p>
+        </div>
+    </div>
+
+    <!-- Add / Edit Modal -->
+    <div id="modal" onclick="if(event.target.id==='modal')hideModal()" 
+         class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="bg-white rounded-3xl max-w-lg w-full mx-4 shadow-2xl">
+            <div class="px-8 pt-8 pb-6">
+                <h3 id="modal-title" class="text-2xl font-semibold mb-6">Add a New Promise</h3>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-2">Promise Title</label>
+                        <input id="promise-title" type="text" 
+                               class="w-full border border-gray-200 focus:border-green-400 rounded-2xl px-5 py-4 outline-none">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-2">Category</label>
+                            <select id="promise-category" class="w-full border border-gray-200 focus:border-green-400 rounded-2xl px-5 py-4 outline-none">
+                                <option value="Economy">Economy</option>
+                                <option value="Housing">Housing</option>
+                                <option value="Agriculture">Agriculture</option>
+                                <option value="Health">Health</option>
+                                <option value="Youth">Youth & Jobs</option>
+                                <option value="Infrastructure">Infrastructure</option>
+                                <option value="Education">Education</option>
+                                <option value="Governance">Governance</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-2">Status</label>
+                            <select id="promise-status" class="w-full border border-gray-200 focus:border-green-400 rounded-2xl px-5 py-4 outline-none">
+                                <option value="Ongoing">🔄 In Progress</option>
+                                <option value="Fulfilled">✅ Fulfilled</option>
+                                <option value="Broken">❌ Not Delivered</option>
+                                <option value="Not Started">⏳ Not Started</option>
+                                <option value="Stalled">🚫 Stalled</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-2">Date Made (YYYY-MM-DD)</label>
+                        <input id="promise-date" type="date" value="2022-08-01"
+                               class="w-full border border-gray-200 focus:border-green-400 rounded-2xl px-5 py-4 outline-none">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-2">Description / Evidence</label>
+                        <textarea id="promise-desc" rows="3"
+                                  class="w-full border border-gray-200 focus:border-green-400 rounded-3xl px-5 py-4 outline-none resize-y"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-2">Source (optional)</label>
+                        <input id="promise-source" type="text" placeholder="Manifesto / Speech / Press release" 
+                               class="w-full border border-gray-200 focus:border-green-400 rounded-2xl px-5 py-4 outline-none">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-8 py-6 border-t flex items-center justify-between">
+                <button onclick="hideModal()" 
+                        class="font-medium text-gray-500 hover:text-gray-700 px-6 py-3">Cancel</button>
+                <button onclick="savePromise()" 
+                        id="save-button"
+                        class="bg-green-600 text-white font-semibold px-10 py-3 rounded-3xl hover:bg-green-700 transition-colors">
+                    Save Promise
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script
+        function initTailwind() {
+            tailwind.config = {
+                content: [],
+                theme: { extend: {} }
+            }
+        }
+
+        // Sample seed data based on real 2022-2026 promises (sourced from Kenya Kwanza Manifesto, public speeches & news)
+        let promises = [
+            {
+                id: 1,
+                title: "Launch Hustler Fund – affordable credit for small businesses & individuals",
+                category: "Economy",
+                date: "2022-09-13",
+                status: "Ongoing",
+                description: "Provide low-interest loans via mobile to hustlers, youth & women groups.",
+                source: "Kenya Kwanza Manifesto & Launch Speech"
+            },
+            {
+                id: 2,
+                title: "Deliver Affordable Housing – thousands of units for ordinary Kenyans",
+                category: "Housing",
+                date: "2022-08-01",
+                status: "Ongoing",
+                description: "Build 1M+ units over time via housing levy & incentives. Thousands completed by 2026.",
+                source: "Manifesto & Affordable Housing Levy"
+            },
+            {
+                id: 3,
+                title: "Reduce cost of living – cheap unga, fuel & basic commodities within 100 days",
+                category: "Economy",
+                date: "2022-09-13",
+                status: "Broken",
+                description: "Immediate price reduction on essentials post-election.",
+                source: "Campaign pledges"
+            },
+            {
+                id: 4,
+                title: "Implement Universal Health Coverage (Social Health Insurance Fund)",
+                category: "Health",
+                date: "2022-08-01",
+                status: "Ongoing",
+                description: "All Kenyans covered under SHIF. Rollout ongoing despite teething issues.",
+                source: "Manifesto"
+            },
+            {
+                id: 5,
+                title: "Create millions of new jobs through bottom-up economic model",
+                category: "Youth",
+                date: "2022-08-01",
+                status: "Ongoing",
+                description: "Focus on MSMEs, agriculture & digital economy to employ youth.",
+                source: "Manifesto"
+            },
+            {
+                id: 6,
+                title: "Transform agriculture – fertilizer subsidy, value addition & food security",
+                category: "Agriculture",
+                date: "2022-09-13",
+                status: "Ongoing",
+                description: "Subsidized fertilizers & market access for smallholder farmers.",
+                source: "Manifesto"
+            },
+            {
+                id: 7,
+                title: "Stabilise the economy & grow it to Africa's top 5",
+                category: "Economy",
+                date: "2022-08-01",
+                status: "Fulfilled",
+                description: "Kenya now ranked 6th largest economy in Africa by 2026 (Ruto claim).",
+                source: "2026 State of the Nation"
+            },
+            {
+                id: 8,
+                title: "Digital Superhighway & nationwide broadband",
+                category: "Infrastructure",
+                date: "2022-08-01",
+                status: "Ongoing",
+                description: "Connect every Kenyan village to high-speed internet.",
+                source: "Manifesto"
+            },
+            {
+                id: 9,
+                title: "Implement two-thirds gender rule in appointments & elective posts",
+                category: "Governance",
+                date: "2022-08-01",
+                status: "Broken",
+                description: "50% women in Cabinet & public appointments.",
+                source: "Manifesto"
+            },
+            {
+                id: 10,
+                title: "Establish a Sovereign Wealth Fund",
+                category: "Economy",
+                date: "2024-01-01",
+                status: "Ongoing",
+                description: "Save oil & mineral revenues for future generations.",
+                source: "2024 Budget"
+            }
+        ]
+
+        let currentEditId = null
+
+        // Load data from localStorage or use seed
+        function loadData() {
+            const saved = localStorage.getItem('rutoPromises')
+            if (saved) {
+                promises = JSON.parse(saved)
+            } else {
+                // First time user – seed data
+                saveData()
+            }
+            render()
+        }
+
+        function saveData() {
+            localStorage.setItem('rutoPromises', JSON.stringify(promises))
+        }
+
+        // Render all promises
+        function render(filteredPromises = null) {
+            const container = document.getElementById('promises-list')
+            container.innerHTML = ''
+            
+            const list = filteredPromises || promises
+            
+            if (list.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden')
+                return
+            } else {
+                document.getElementById('empty-state').classList.add('hidden')
+            }
+            
+            list.forEach(p => {
+                const statusColors = {
+                    'Fulfilled': 'bg-emerald-100 text-emerald-700',
+                    'Ongoing': 'bg-blue-100 text-blue-700',
+                    'Broken': 'bg-red-100 text-red-700',
+                    'Not Started': 'bg-gray-100 text-gray-700',
+                    'Stalled': 'bg-amber-100 text-amber-700'
+                }
+                
+                const html = `
+                <div class="bg-white rounded-3xl p-6 card-hover border border-transparent hover:border-gray-100">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="px-3 py-1 text-xs font-medium rounded-3xl bg-gray-100 text-gray-600">${p.category}</div>
+                        <div class="status-badge ${statusColors[p.status]}">${p.status}</div>
+                    </div>
+                    
+                    <h4 class="font-semibold text-xl leading-tight mb-2">${p.title}</h4>
+                    <p class="text-gray-600 text-sm line-clamp-3 mb-4">${p.description}</p>
+                    
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                        <div class="flex items-center gap-x-1">
+                            <i class="fa-solid fa-calendar"></i>
+                            <span>${p.date}</span>
+                        </div>
+                        ${p.source ? `<span class="italic">${p.source}</span>` : ''}
+                    </div>
+                    
+                    <div class="mt-6 flex gap-x-3">
+                        <button onclick="editPromise(${p.id})" 
+                                class="flex-1 flex items-center justify-center gap-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-2xl text-sm font-medium">
+                            <i class="fa-solid fa-pen"></i> Edit
+                        </button>
+                        <button onclick="deletePromise(${p.id})" 
+                                class="flex-1 flex items-center justify-center gap-x-2 bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-2xl text-sm font-medium">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>`
+                
+                container.innerHTML += html
+            })
+            
+            updateStats()
+        }
+
+        function updateStats() {
+            const total = promises.length
+            const fulfilled = promises.filter(p => p.status === 'Fulfilled').length
+            const ongoing = promises.filter(p => p.status === 'Ongoing').length
+            const broken = promises.filter(p => p.status === 'Broken').length
+            
+            document.getElementById('total-count').textContent = total
+            document.getElementById('fulfilled-count').textContent = fulfilled
+            document.getElementById('ongoing-count').textContent = ongoing
+            document.getElementById('broken-count').textContent = broken
+        }
+
+        // Filter functions
+        function filterPromises() {
+            const search = document.getElementById('search-input').value.toLowerCase().trim()
+            const category = document.getElementById('category-filter').value
+            const status = document.getElementById('status-filter').value
+            
+            const filtered = promises.filter(p => {
+                const matchesSearch = !search || 
+                    p.title.toLowerCase().includes(search) || 
+                    p.description.toLowerCase().includes(search)
+                
+                const matchesCategory = !category || p.category === category
+                const matchesStatus = !status || p.status === status
+                
+                return matchesSearch && matchesCategory && matchesStatus
+            })
+            
+            render(filtered)
+        }
+
+        function filterByStatus(status) {
+            // Reset other filters
+            document.getElementById('search-input').value = ''
+            document.getElementById('category-filter').value = ''
+            document.getElementById('status-filter').value = status === 'all' ? '' : status
+            filterPromises()
+        }
+
+        // Modal functions
+        function showAddModal() {
+            currentEditId = null
+            document.getElementById('modal-title').textContent = 'Add New Promise'
+            document.getElementById('save-button').textContent = 'Save Promise'
+            
+            // Clear form
+            document.getElementById('promise-title').value = ''
+            document.getElementById('promise-desc').value = ''
+            document.getElementById('promise-source').value = ''
+            document.getElementById('promise-date').value = '2022-08-01'
+            document.getElementById('promise-category').value = 'Economy'
+            document.getElementById('promise-status').value = 'Ongoing'
+            
+            document.getElementById('modal').classList.remove('hidden')
+            document.getElementById('modal').classList.add('flex')
+        }
+
+        function hideModal() {
+            const modal = document.getElementById('modal')
+            modal.classList.add('hidden')
+            modal.classList.remove('flex')
+        }
+
+        function savePromise() {
+            const title = document.getElementById('promise-title').value.trim()
+            if (!title) {
+                alert("Promise title is required!")
+                return
+            }
+            
+            const promise = {
+                id: currentEditId || Date.now(),
+                title: title,
+                category: document.getElementById('promise-category').value,
+                date: document.getElementById('promise-date').value,
+                status: document.getElementById('promise-status').value,
+                description: document.getElementById('promise-desc').value.trim(),
+                source: document.getElementById('promise-source').value.trim()
+            }
+            
+            if (currentEditId) {
+                // Update existing
+                const index = promises.findIndex(p => p.id === currentEditId)
+                if (index > -1) promises[index] = promise
+            } else {
+                // Add new
+                promises.unshift(promise) // newest first
+            }
+            
+            saveData()
+            hideModal()
+            render()
+        }
+
+        function editPromise(id) {
+            const promise = promises.find(p => p.id === id)
+            if (!promise) return
+            
+            currentEditId = id
+            document.getElementById('modal-title').textContent = 'Edit Promise'
+            document.getElementById('save-button').textContent = 'Update Promise'
+            
+            document.getElementById('promise-title').value = promise.title
+            document.getElementById('promise-desc').value = promise.description
+            document.getElementById('promise-source').value = promise.source || ''
+            document.getElementById('promise-date').value = promise.date
+            document.getElementById('promise-category').value = promise.category
+            document.getElementById('promise-status').value = promise.status
+            
+            document.getElementById('modal').classList.remove('hidden')
+            document.getElementById('modal').classList.add('flex')
+        }
+
+        function deletePromise(id) {
+            if (!confirm('Delete this promise permanently?')) return
+            promises = promises.filter(p => p.id !== id)
+            saveData()
+            render()
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(promises, null, 2)
+            const blob = new Blob([dataStr], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `ruto-promises-tracker-${new Date().toISOString().slice(0,10)}.json`
+            link.click()
+            URL.revokeObjectURL(url)
+        }
+
+        function importData() {
+            const input = document.createElement('input')
+            input.type = 'file'
+            input.accept = '.json'
+            input.onchange = e => {
+                const file = e.target.files[0]
+                const reader = new FileReader()
+                reader.onload = event => {
+                    try {
+                        const imported = JSON.parse(event.target.result)
+                        if (Array.isArray(imported)) {
+                            if (confirm(`Import ${imported.length} promises? This will replace current data.`)) {
+                                promises = imported
+                                saveData()
+                                render()
+                                alert('✅ Data imported successfully!')
+                            }
+                        }
+                    } catch(e) {
+                        alert('Invalid JSON file')
+                    }
+                }
+                reader.readAsText(file)
+            }
+            input.click()
+        }
+
+        function resetData() {
+            if (confirm('Reset to original 10 seed promises? All your custom changes will be lost.')) {
+                localStorage.removeItem('rutoPromises')
+                promises = JSON.parse(JSON.stringify([
+                    // Reset to the exact seed array above
+                    {id:1,title:"Launch Hustler Fund – affordable credit for small businesses & individuals",category:"Economy",date:"2022-09-13",status:"Ongoing",description:"Provide low-interest loans via mobile to hustlers, youth & women groups.",source:"Kenya Kwanza Manifesto & Launch Speech"},
+                    {id:2,title:"Deliver Affordable Housing – thousands of units for ordinary Kenyans",category:"Housing",date:"2022-08-01",status:"Ongoing",description:"Build 1M+ units over time via housing levy & incentives. Thousands completed by 2026.",source:"Manifesto & Affordable Housing Levy"},
+                    {id:3,title:"Reduce cost of living – cheap unga, fuel & basic commodities within 100 days",category:"Economy",date:"2022-09-13",status:"Broken",description:"Immediate price reduction on essentials post-election.",source:"Campaign pledges"},
+                    {id:4,title:"Implement Universal Health Coverage (Social Health Insurance Fund)",category:"Health",date:"2022-08-01",status:"Ongoing",description:"All Kenyans covered under SHIF. Rollout ongoing despite teething issues.",source:"Manifesto"},
+                    {id:5,title:"Create millions of new jobs through bottom-up economic model",category:"Youth",date:"2022-08-01",status:"Ongoing",description:"Focus on MSMEs, agriculture & digital economy to employ youth.",source:"Manifesto"},
+                    {id:6,title:"Transform agriculture – fertilizer subsidy, value addition & food security",category:"Agriculture",date:"2022-09-13",status:"Ongoing",description:"Subsidized fertilizers & market access for smallholder farmers.",source:"Manifesto"},
+                    {id:7,title:"Stabilise the economy & grow it to Africa's top 5",category:"Economy",date:"2022-08-01",status:"Fulfilled",description:"Kenya now ranked 6th largest economy in Africa by 2026 (Ruto claim).",source:"2026 State of the Nation"},
+                    {id:8,title:"Digital Superhighway & nationwide broadband",category:"Infrastructure",date:"2022-08-01",status:"Ongoing",description:"Connect every Kenyan village to high-speed internet.",source:"Manifesto"},
+                    {id:9,title:"Implement two-thirds gender rule in appointments & elective posts",category:"Governance",date:"2022-08-01",status:"Broken",description:"50% women in Cabinet & public appointments.",source:"Manifesto"},
+                    {id:10,title:"Establish a Sovereign Wealth Fund",category:"Economy",date:"2024-01-01",status:"Ongoing",description:"Save oil & mineral revenues for future generations.",source:"2024 Budget"}
+                ]))
+                saveData()
+                render()
+            }
+        }
+
+        // Populate category dropdown dynamically
+        function populateCategories() {
+            const categories = [...new Set(promises.map(p => p.category))]
+            const select = document.getElementById('category-filter')
+            categories.forEach(cat => {
+                const opt = document.createElement('option')
+                opt.value = cat
+                opt.textContent = cat
+                select.appendChild(opt)
+            })
+        }
+
+        // Initialize everything
+        window.onload = function() {
+            initTailwind()
+            loadData()
+            populateCategories()
+            console.log('%c✅ Ruto Promises Tracker ready! Built with ❤️ for Kenyans.', 'color: #10b981; font-weight: bold')
+        }
+    </script>
+</body>
+</html>
